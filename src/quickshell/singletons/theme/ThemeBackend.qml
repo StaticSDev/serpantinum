@@ -303,7 +303,8 @@ Item {
         safeAssign("pink",      c.pink);
         safeAssign("yellow",    c.yellow);
         safeAssign("maroon",    c.maroon);
-        safeAssign("teal",      c.teal);
+        let serpDir = Quickshell.env("SERPANTINUM_DIR") ? Quickshell.env("SERPANTINUM_DIR") : (Quickshell.env("HOME") + "/.local/share/serpantinum/src");
+        Quickshell.execDetached(["bash", "-c", "python3 \"" + serpDir + "/scripts/theme/sync_shaders.py\" 2>/dev/null || python3 \"" + Quickshell.env("HOME") + "/Desktop/serpantinum/src/scripts/theme/sync_shaders.py\" 2>/dev/null || true"]);
     }
 
     FileView {

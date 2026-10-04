@@ -228,6 +228,7 @@ if [ "$COMMAND" == "start" ]; then
         local targets=()
         [ -n "$QS_PID" ] && targets+=("$QS_PID")
         [ -n "$LAUNCH_PID" ] && targets+=("$LAUNCH_PID")
+        [ -n "$SYNC_PID" ] && targets+=("$SYNC_PID")
 
         local child
         for child in $(get_all_children $$ 2>/dev/null); do
@@ -292,6 +293,9 @@ if [ "$COMMAND" == "start" ]; then
 
     bash "$SERPANTINUM_DIR/quickshell/guide/wellbeing/launch_daemon.sh" 9>&- &
     LAUNCH_PID=$!
+
+    python3 "$SERPANTINUM_DIR/scripts/theme/sync_shaders.py" --watch 9>&- &
+    SYNC_PID=$!
 
     quickshell -p "$MAIN_QML" 9>&- &
     QS_PID=$!

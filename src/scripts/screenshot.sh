@@ -43,7 +43,16 @@ SAVE_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Screenshots"
 RECORD_DIR="${XDG_VIDEOS_DIR:-$HOME/Videos}/Recordings"
 mkdir -p "$SAVE_DIR" "$RECORD_DIR"
 
-REQUIRED_CMDS=("grim" "satty" "wl-copy" "pactl" "quickshell" "zbarimg" "python3")
+REQUIRED_CMDS=("grim" "wl-copy" "quickshell" "python3")
+if [ "$EDIT_MODE" = true ] && ! command -v satty &>/dev/null && command -v swappy &>/dev/null; then
+    # Fallback to swappy if satty is not available
+    true
+elif [ "$EDIT_MODE" = true ]; then
+    REQUIRED_CMDS+=("satty")
+fi
+if [ "$SCAN_QR_MODE" = true ]; then
+    REQUIRED_CMDS+=("zbarimg")
+fi
 MISSING_CMDS=()
 for cmd in "${REQUIRED_CMDS[@]}"; do
     if ! command -v "$cmd" &> /dev/null; then

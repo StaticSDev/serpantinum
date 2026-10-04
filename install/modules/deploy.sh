@@ -441,4 +441,27 @@ deploy_package() {
         ln -sf "$TARGET_BASE/bin/serpantinumd" "$BIN_DIR/serpantinumd"
         sudo ln -sf "$TARGET_BASE/bin/serpantinumd" /usr/local/bin/serpantinumd 2>/dev/null || true
     fi
+
+    # Deploy starship configuration
+    if [ -f "$REPO_ROOT/config/starship/starship.toml" ]; then
+        cp -f "$REPO_ROOT/config/starship/starship.toml" "$HOME/.config/starship.toml"
+    fi
+
+    # Deploy Hyprland liquid shaders
+    if [ -d "$REPO_ROOT/src/assets/shaders" ]; then
+        mkdir -p "$HOME/.config/hypr/shaders"
+        cp -rf "$REPO_ROOT/src/assets/shaders/." "$HOME/.config/hypr/shaders/"
+    fi
+
+    # Deploy HyprWindowShade plugin
+    if [ -d "$REPO_ROOT/src/assets/plugins" ]; then
+        mkdir -p "$HOME/.local/share/hyprland/plugins"
+        cp -rf "$REPO_ROOT/src/assets/plugins/." "$HOME/.local/share/hyprland/plugins/"
+        chmod +x "$HOME/.local/share/hyprland/plugins/"* 2>/dev/null || true
+    fi
+
+    # Initial shader & terminal palette sync
+    if [ -f "$TARGET_BASE/src/scripts/theme/sync_shaders.py" ]; then
+        python3 "$TARGET_BASE/src/scripts/theme/sync_shaders.py" >/dev/null 2>&1 || true
+    fi
 }
