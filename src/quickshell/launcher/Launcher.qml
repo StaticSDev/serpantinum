@@ -140,13 +140,12 @@ PanelWindow {
     SequentialAnimation {
         id: itemsIntroSequence
         running: false
-        PauseAnimation { duration: 60 }
         NumberAnimation {
             target: launcherWindow
             property: "introItems"
             from: 0.0
             to: 1.0
-            duration: 520
+            duration: 440
             easing.type: Easing.Linear
         }
     }
@@ -1122,9 +1121,9 @@ PanelWindow {
         property real animProgress: launcherWindow.isVisible ? 1.0 : 0.0
         Behavior on animProgress {
             NumberAnimation {
-                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 420 : 340) : (launcherWindow.isCentered ? 200 : 150)
+                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 360 : 320) : (launcherWindow.isCentered ? 180 : 140)
                 easing.type: launcherWindow.isVisible ? Easing.OutBack : Easing.InQuad
-                easing.overshoot: launcherWindow.isVisible ? 1.28 : 1.0
+                easing.overshoot: launcherWindow.isVisible ? 1.08 : 1.0
             }
         }
 
@@ -1138,7 +1137,7 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.width - offset) - width;
             }
-            return Math.floor((launcherWindow.width - width) / 2);
+            return (launcherWindow.width - width) * 0.5;
         }
 
         y: {
@@ -1149,7 +1148,7 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.height - offset) - height;
             }
-            return Math.floor((launcherWindow.height - height) / 2);
+            return (launcherWindow.height - height) * 0.5;
         }
 
         width: launcherWindow.isSideAttached
@@ -1625,7 +1624,7 @@ PanelWindow {
                     clip: true
 
                     opacity: launcherWindow.isCentered
-                             ? Math.max(0.0, Math.min(1.0, (container.animProgress - 0.2) / 0.8))
+                             ? Math.max(0.0, Math.min(1.0, container.animProgress * 1.25))
                              : 1.0
 
                     NumberAnimation {
