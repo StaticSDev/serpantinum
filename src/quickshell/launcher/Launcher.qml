@@ -50,27 +50,6 @@ PanelWindow {
     property string tabFilesTitle: (typeof I18n !== "undefined") ? I18n.t("applauncher.tab_files", "Files") : "Files"
     property string tabEmojisTitle: (typeof I18n !== "undefined") ? I18n.t("applauncher.tab_emojis", "Emojis") : "Emojis"
 
-    property var _iconPathCache: ({})
-    function getIconSource(ic) {
-        if (!ic) return "";
-        if (ic.startsWith("file://") || ic.startsWith("image://") || ic.startsWith("http://") || ic.startsWith("https://")) return ic;
-        if (ic.startsWith("/")) return "file://" + ic;
-        if (_iconPathCache[ic] !== undefined) return _iconPathCache[ic];
-
-        let baseName = ic.replace(/\.(png|svg|xpm|ico)$/i, "");
-        if (typeof Quickshell !== "undefined" && typeof Quickshell.iconPath === "function") {
-            let resolved = Quickshell.iconPath(ic) || Quickshell.iconPath(baseName);
-            if (resolved && resolved.length > 0) {
-                let res = resolved.startsWith("/") ? ("file://" + resolved) : resolved;
-                _iconPathCache[ic] = res;
-                return res;
-            }
-        }
-        let fallback = "image://icon/" + baseName;
-        _iconPathCache[ic] = fallback;
-        return fallback;
-    }
-
     function saveLastTab() {
         let dir = (typeof Caching !== "undefined" && typeof Caching.getCacheDir === "function") ? Caching.getCacheDir("launcher") : "";
         if (dir) {
@@ -140,12 +119,13 @@ PanelWindow {
     SequentialAnimation {
         id: itemsIntroSequence
         running: false
+        PauseAnimation { duration: 60 }
         NumberAnimation {
             target: launcherWindow
             property: "introItems"
             from: 0.0
             to: 1.0
-            duration: 440
+            duration: 520
             easing.type: Easing.Linear
         }
     }
@@ -366,9 +346,8 @@ PanelWindow {
 
     property real animatedLauncherHeight: targetLauncherHeight
     Behavior on animatedLauncherHeight {
-        enabled: launcherWindow.isVisible
         NumberAnimation {
-            duration: 140
+            duration: 300
             easing.type: Easing.OutCubic
         }
     }
@@ -652,13 +631,11 @@ PanelWindow {
                     score = f_score + l_score + (0.5 * c_score);
                 }
 
-                let iconSrc = launcherWindow.getIconSource(e.icon || "");
                 arr.push({
                     name: e.name,
                     description: e.comment || "",
                     desktop_id: e.id,
                     icon: e.icon || "",
-                    iconSource: iconSrc,
                     fontIcon: "",
                     score: score,
                     isCommand: false,
@@ -689,7 +666,6 @@ PanelWindow {
                 description: w.description || "",
                 desktop_id: "qs-widget-" + w.id,
                 icon: w.icon || "",
-                iconSource: launcherWindow.getIconSource(w.icon || ""),
                 fontIcon: w.fontIcon || "",
                 score: wScore,
                 isCommand: false,
@@ -1121,9 +1097,9 @@ PanelWindow {
         property real animProgress: launcherWindow.isVisible ? 1.0 : 0.0
         Behavior on animProgress {
             NumberAnimation {
-                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 360 : 320) : (launcherWindow.isCentered ? 180 : 140)
+                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 420 : 340) : (launcherWindow.isCentered ? 200 : 150)
                 easing.type: launcherWindow.isVisible ? Easing.OutBack : Easing.InQuad
-                easing.overshoot: launcherWindow.isVisible ? 1.08 : 1.0
+                easing.overshoot: launcherWindow.isVisible ? 1.28 : 1.0
             }
         }
 
@@ -1137,7 +1113,7 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.width - offset) - width;
             }
-            return (launcherWindow.width - width) * 0.5;
+            return Math.floor((launcherWindow.width - width) / 2);
         }
 
         y: {
@@ -1148,7 +1124,7 @@ PanelWindow {
                 let offset = launcherWindow.barMatchesLauncher ? launcherWindow.barHeight : 0;
                 return (launcherWindow.height - offset) - height;
             }
-            return (launcherWindow.height - height) * 0.5;
+            return Math.floor((launcherWindow.height - height) / 2);
         }
 
         width: launcherWindow.isSideAttached
@@ -1624,51 +1600,15 @@ PanelWindow {
                     clip: true
 
                     opacity: launcherWindow.isCentered
-                             ? Math.max(0.0, Math.min(1.0, container.animProgress * 1.25))
+                             ? Math.max(0.0, Math.min(1.0, (container.animProgress - 0.2) / 0.8))
                              : 1.0
 
                     NumberAnimation {
                         id: scrollAnim
                         target: appList
                         property: "contentY"
-                        duration: 160
+                        duration: 260
                         easing.type: Easing.OutCubic
-                    }
-
-                    NumberAnimation {
-                        id: smoothWheelAnim
-                        target: appList
-                        property: "contentY"
-                        duration: 180
-                        easing.type: Easing.OutCubic
-                    }
-
-                    WheelHandler {
-                        id: appListWheelHandler
-                        target: null
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                        onWheel: function(event) {
-                            let dy = (event.angleDelta && event.angleDelta.y !== 0) ? event.angleDelta.y : (event.pixelDelta ? event.pixelDelta.y : 0);
-                            if (dy === 0) return;
-
-                            if (event.pixelDelta && event.pixelDelta.y !== 0 && Math.abs(event.angleDelta.y) <= 15) {
-                                let maxS = Math.max(0, appList.contentHeight - appList.height);
-                                appList.contentY = Math.max(0, Math.min(maxS, appList.contentY - event.pixelDelta.y));
-                                event.accepted = true;
-                                return;
-                            }
-
-                            let step = (dy / 120) * launcherWindow.s(140);
-                            let currentTarget = smoothWheelAnim.running ? smoothWheelAnim.to : appList.contentY;
-                            let maxScroll = Math.max(0, appList.contentHeight - appList.height);
-                            let newTarget = Math.max(0, Math.min(maxScroll, currentTarget - step));
-
-                            smoothWheelAnim.stop();
-                            smoothWheelAnim.from = appList.contentY;
-                            smoothWheelAnim.to = newTarget;
-                            smoothWheelAnim.start();
-                            event.accepted = true;
-                        }
                     }
 
                     ListView {
@@ -1818,15 +1758,12 @@ PanelWindow {
                                 RowLayout {
                                     anchors.fill: parent
                                     anchors.margins: launcherWindow.s(6)
-                                    anchors.leftMargin: launcherWindow.s(10)
+                                    anchors.leftMargin: launcherWindow.s(10) + (delegateRoot.isSelected ? launcherWindow.s(2) : 0)
                                     anchors.rightMargin: launcherWindow.s(10)
                                     spacing: launcherWindow.s(10)
 
-                                    transform: Translate {
-                                        x: delegateRoot.isSelected ? launcherWindow.s(2) : 0
-                                        Behavior on x {
-                                            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
-                                        }
+                                    Behavior on anchors.leftMargin {
+                                        NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
                                     }
 
                                     Item {
@@ -1860,20 +1797,39 @@ PanelWindow {
                                             anchors.margins: parent.boxPadding
                                             radius: Math.max(0, parent.boxRadius - parent.boxPadding)
                                             color: "transparent"
+                                            clip: true
 
-                                             Image {
+                                            Image {
                                                 id: delegateIcon
                                                 anchors.fill: parent
                                                 property bool failedLoad: false
-                                                cache: true
+                                                cache: false
 
                                                 visible: (!model.fontIcon || model.fontIcon === "") && source !== "" && status === Image.Ready && !failedLoad
-                                                source: (!model.fontIcon || model.fontIcon === "") ? (model.iconSource || launcherWindow.getIconSource(model.icon)) : ""
+
+                                                source: {
+                                                    if (model.fontIcon && model.fontIcon !== "") return "";
+                                                    let ic = model.icon || "";
+                                                    if (!ic) return "";
+                                                    if (ic.startsWith("file://") || ic.startsWith("image://") || ic.startsWith("http://") || ic.startsWith("https://")) return ic;
+                                                    if (ic.startsWith("/")) return "file://" + ic;
+
+                                                    let baseName = ic.replace(/\.(png|svg|xpm|ico)$/i, "");
+                                                    if (typeof Quickshell !== "undefined" && typeof Quickshell.iconPath === "function") {
+                                                        let resolved = Quickshell.iconPath(ic) || Quickshell.iconPath(baseName);
+                                                        if (resolved && resolved.length > 0) {
+                                                            return resolved.startsWith("/") ? ("file://" + resolved) : resolved;
+                                                        }
+                                                    }
+
+                                                    return "image://icon/" + baseName;
+                                                }
 
                                                 sourceSize: Qt.size(64, 64)
                                                 fillMode: Image.PreserveAspectFit
                                                 asynchronous: true
                                                 smooth: true
+                                                mipmap: true
 
                                                 onStatusChanged: {
                                                     if (status === Image.Error) {
