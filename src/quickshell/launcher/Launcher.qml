@@ -113,42 +113,20 @@ PanelWindow {
     }
 
     function getItemProgress(idx) {
-        if (introItems >= 1.0) return 1.0;
-        if (introItems <= 0.0) return 0.0;
-        let start = Math.min(idx, 10) * 0.04;
-        let p = Math.min(1.0, Math.max(0.0, (introItems - start) / 0.42));
-        if (p <= 0.0) return 0.0;
-        if (p >= 1.0) return 1.0;
-        let c1 = 0.85;
-        let c3 = c1 + 1;
-        return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
+        return 1.0;
     }
 
     function getItemOpacity(idx) {
-        if (introItems >= 1.0) return 1.0;
-        if (introItems <= 0.0) return 0.0;
-        let start = Math.min(idx, 10) * 0.04;
-        let p = Math.min(1.0, Math.max(0.0, (introItems - start) / 0.28));
-        return p;
+        return 1.0;
     }
 
     function restartItemsIntro() {
-        introItems = 0.0;
-        itemsIntroSequence.restart();
+        introItems = 1.0;
     }
 
     SequentialAnimation {
         id: itemsIntroSequence
         running: false
-        PauseAnimation { duration: 60 }
-        NumberAnimation {
-            target: launcherWindow
-            property: "introItems"
-            from: 0.0
-            to: 1.0
-            duration: 520
-            easing.type: Easing.Linear
-        }
     }
 
     Component.onCompleted: {
@@ -367,9 +345,10 @@ PanelWindow {
 
     property real animatedLauncherHeight: targetLauncherHeight
     Behavior on animatedLauncherHeight {
+        enabled: launcherWindow.isVisible
         NumberAnimation {
-            duration: 160
-            easing.type: Easing.OutQuad
+            duration: 140
+            easing.type: Easing.OutCubic
         }
     }
 
@@ -1118,9 +1097,8 @@ PanelWindow {
         property real animProgress: launcherWindow.isVisible ? 1.0 : 0.0
         Behavior on animProgress {
             NumberAnimation {
-                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 420 : 340) : (launcherWindow.isCentered ? 200 : 150)
-                easing.type: launcherWindow.isVisible ? Easing.OutBack : Easing.InQuad
-                easing.overshoot: launcherWindow.isVisible ? 1.28 : 1.0
+                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 180 : 240) : (launcherWindow.isCentered ? 130 : 120)
+                easing.type: launcherWindow.isVisible ? Easing.OutCubic : Easing.InQuad
             }
         }
 
@@ -1154,9 +1132,7 @@ PanelWindow {
 
         height: {
             if (launcherWindow.isCentered) {
-                let baseH = launcherWindow.collapsedCenterHeight;
-                let targetH = Math.max(baseH, launcherWindow.animatedLauncherHeight);
-                return baseH + (targetH - baseH) * animProgress;
+                return launcherWindow.animatedLauncherHeight;
             }
             if (!launcherWindow.isSideAttached) {
                 return launcherWindow.animatedLauncherHeight * animProgress;
@@ -1164,8 +1140,9 @@ PanelWindow {
             return launcherWindow.animatedLauncherHeight;
         }
 
+        scale: launcherWindow.isCentered ? (0.96 + 0.04 * animProgress) : 1.0
         opacity: launcherWindow.isCentered
-                 ? Math.max(0.0, Math.min(1.0, animProgress * 1.5))
+                 ? animProgress
                  : ((launcherWindow.isVisible || animProgress > 0.001) ? 1.0 : 0.0)
 
         transformOrigin: Item.Center
@@ -1620,9 +1597,7 @@ PanelWindow {
                             : Math.max(0, parent.height - y)
                     clip: true
 
-                    opacity: launcherWindow.isCentered
-                             ? Math.max(0.0, Math.min(1.0, (container.animProgress - 0.2) / 0.8))
-                             : 1.0
+                    opacity: 1.0
 
                     NumberAnimation {
                         id: scrollAnim
