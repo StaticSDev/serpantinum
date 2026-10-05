@@ -50,6 +50,27 @@ PanelWindow {
     property string tabFilesTitle: (typeof I18n !== "undefined") ? I18n.t("applauncher.tab_files", "Files") : "Files"
     property string tabEmojisTitle: (typeof I18n !== "undefined") ? I18n.t("applauncher.tab_emojis", "Emojis") : "Emojis"
 
+    property var _iconPathCache: ({})
+    function getIconSource(ic) {
+        if (!ic) return "";
+        if (ic.startsWith("file://") || ic.startsWith("image://") || ic.startsWith("http://") || ic.startsWith("https://")) return ic;
+        if (ic.startsWith("/")) return "file://" + ic;
+        if (_iconPathCache[ic] !== undefined) return _iconPathCache[ic];
+
+        let baseName = ic.replace(/\.(png|svg|xpm|ico)$/i, "");
+        if (typeof Quickshell !== "undefined" && typeof Quickshell.iconPath === "function") {
+            let resolved = Quickshell.iconPath(ic) || Quickshell.iconPath(baseName);
+            if (resolved && resolved.length > 0) {
+                let res = resolved.startsWith("/") ? ("file://" + resolved) : resolved;
+                _iconPathCache[ic] = res;
+                return res;
+            }
+        }
+        let fallback = "image://icon/" + baseName;
+        _iconPathCache[ic] = fallback;
+        return fallback;
+    }
+
     function saveLastTab() {
         let dir = (typeof Caching !== "undefined" && typeof Caching.getCacheDir === "function") ? Caching.getCacheDir("launcher") : "";
         if (dir) {
@@ -347,8 +368,8 @@ PanelWindow {
     property real animatedLauncherHeight: targetLauncherHeight
     Behavior on animatedLauncherHeight {
         NumberAnimation {
-            duration: 300
-            easing.type: Easing.OutCubic
+            duration: 160
+            easing.type: Easing.OutQuad
         }
     }
 
@@ -1758,12 +1779,15 @@ PanelWindow {
                                 RowLayout {
                                     anchors.fill: parent
                                     anchors.margins: launcherWindow.s(6)
-                                    anchors.leftMargin: launcherWindow.s(10) + (delegateRoot.isSelected ? launcherWindow.s(2) : 0)
+                                    anchors.leftMargin: launcherWindow.s(10)
                                     anchors.rightMargin: launcherWindow.s(10)
                                     spacing: launcherWindow.s(10)
 
-                                    Behavior on anchors.leftMargin {
-                                        NumberAnimation { duration: 220; easing.type: Easing.OutBack; easing.overshoot: 1.15 }
+                                    transform: Translate {
+                                        x: delegateRoot.isSelected ? launcherWindow.s(2) : 0
+                                        Behavior on x {
+                                            NumberAnimation { duration: 160; easing.type: Easing.OutCubic }
+                                        }
                                     }
 
                                     Item {
@@ -1799,31 +1823,14 @@ PanelWindow {
                                             color: "transparent"
                                             clip: true
 
-                                            Image {
+                                             Image {
                                                 id: delegateIcon
                                                 anchors.fill: parent
                                                 property bool failedLoad: false
-                                                cache: false
+                                                cache: true
 
                                                 visible: (!model.fontIcon || model.fontIcon === "") && source !== "" && status === Image.Ready && !failedLoad
-
-                                                source: {
-                                                    if (model.fontIcon && model.fontIcon !== "") return "";
-                                                    let ic = model.icon || "";
-                                                    if (!ic) return "";
-                                                    if (ic.startsWith("file://") || ic.startsWith("image://") || ic.startsWith("http://") || ic.startsWith("https://")) return ic;
-                                                    if (ic.startsWith("/")) return "file://" + ic;
-
-                                                    let baseName = ic.replace(/\.(png|svg|xpm|ico)$/i, "");
-                                                    if (typeof Quickshell !== "undefined" && typeof Quickshell.iconPath === "function") {
-                                                        let resolved = Quickshell.iconPath(ic) || Quickshell.iconPath(baseName);
-                                                        if (resolved && resolved.length > 0) {
-                                                            return resolved.startsWith("/") ? ("file://" + resolved) : resolved;
-                                                        }
-                                                    }
-
-                                                    return "image://icon/" + baseName;
-                                                }
+                                                source: (!model.fontIcon || model.fontIcon === "") ? launcherWindow.getIconSource(model.icon) : ""
 
                                                 sourceSize: Qt.size(64, 64)
                                                 fillMode: Image.PreserveAspectFit
