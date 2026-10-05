@@ -113,20 +113,42 @@ PanelWindow {
     }
 
     function getItemProgress(idx) {
-        return 1.0;
+        if (introItems >= 1.0) return 1.0;
+        if (introItems <= 0.0) return 0.0;
+        let start = Math.min(idx, 10) * 0.04;
+        let p = Math.min(1.0, Math.max(0.0, (introItems - start) / 0.42));
+        if (p <= 0.0) return 0.0;
+        if (p >= 1.0) return 1.0;
+        let c1 = 0.85;
+        let c3 = c1 + 1;
+        return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
     }
 
     function getItemOpacity(idx) {
-        return 1.0;
+        if (introItems >= 1.0) return 1.0;
+        if (introItems <= 0.0) return 0.0;
+        let start = Math.min(idx, 10) * 0.04;
+        let p = Math.min(1.0, Math.max(0.0, (introItems - start) / 0.28));
+        return p;
     }
 
     function restartItemsIntro() {
-        introItems = 1.0;
+        introItems = 0.0;
+        itemsIntroSequence.restart();
     }
 
     SequentialAnimation {
         id: itemsIntroSequence
         running: false
+        PauseAnimation { duration: 60 }
+        NumberAnimation {
+            target: launcherWindow
+            property: "introItems"
+            from: 0.0
+            to: 1.0
+            duration: 520
+            easing.type: Easing.Linear
+        }
     }
 
     Component.onCompleted: {
@@ -631,11 +653,13 @@ PanelWindow {
                     score = f_score + l_score + (0.5 * c_score);
                 }
 
+                let iconSrc = launcherWindow.getIconSource(e.icon || "");
                 arr.push({
                     name: e.name,
                     description: e.comment || "",
                     desktop_id: e.id,
                     icon: e.icon || "",
+                    iconSource: iconSrc,
                     fontIcon: "",
                     score: score,
                     isCommand: false,
@@ -666,6 +690,7 @@ PanelWindow {
                 description: w.description || "",
                 desktop_id: "qs-widget-" + w.id,
                 icon: w.icon || "",
+                iconSource: launcherWindow.getIconSource(w.icon || ""),
                 fontIcon: w.fontIcon || "",
                 score: wScore,
                 isCommand: false,
@@ -1097,8 +1122,9 @@ PanelWindow {
         property real animProgress: launcherWindow.isVisible ? 1.0 : 0.0
         Behavior on animProgress {
             NumberAnimation {
-                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 180 : 240) : (launcherWindow.isCentered ? 130 : 120)
-                easing.type: launcherWindow.isVisible ? Easing.OutCubic : Easing.InQuad
+                duration: launcherWindow.isVisible ? (launcherWindow.isCentered ? 420 : 340) : (launcherWindow.isCentered ? 200 : 150)
+                easing.type: launcherWindow.isVisible ? Easing.OutBack : Easing.InQuad
+                easing.overshoot: launcherWindow.isVisible ? 1.28 : 1.0
             }
         }
 
@@ -1132,7 +1158,9 @@ PanelWindow {
 
         height: {
             if (launcherWindow.isCentered) {
-                return launcherWindow.animatedLauncherHeight;
+                let baseH = launcherWindow.collapsedCenterHeight;
+                let targetH = Math.max(baseH, launcherWindow.animatedLauncherHeight);
+                return baseH + (targetH - baseH) * animProgress;
             }
             if (!launcherWindow.isSideAttached) {
                 return launcherWindow.animatedLauncherHeight * animProgress;
@@ -1140,9 +1168,8 @@ PanelWindow {
             return launcherWindow.animatedLauncherHeight;
         }
 
-        scale: launcherWindow.isCentered ? (0.96 + 0.04 * animProgress) : 1.0
         opacity: launcherWindow.isCentered
-                 ? animProgress
+                 ? Math.max(0.0, Math.min(1.0, animProgress * 1.5))
                  : ((launcherWindow.isVisible || animProgress > 0.001) ? 1.0 : 0.0)
 
         transformOrigin: Item.Center
@@ -1597,14 +1624,52 @@ PanelWindow {
                             : Math.max(0, parent.height - y)
                     clip: true
 
-                    opacity: 1.0
+                    opacity: launcherWindow.isCentered
+                             ? Math.max(0.0, Math.min(1.0, (container.animProgress - 0.2) / 0.8))
+                             : 1.0
 
                     NumberAnimation {
                         id: scrollAnim
                         target: appList
                         property: "contentY"
-                        duration: 260
+                        duration: 160
                         easing.type: Easing.OutCubic
+                    }
+
+                    NumberAnimation {
+                        id: smoothWheelAnim
+                        target: appList
+                        property: "contentY"
+                        duration: 180
+                        easing.type: Easing.OutCubic
+                    }
+
+                    WheelHandler {
+                        id: appListWheelHandler
+                        target: null
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                        onWheel: function(event) {
+                            let dy = (event.angleDelta && event.angleDelta.y !== 0) ? event.angleDelta.y : (event.pixelDelta ? event.pixelDelta.y : 0);
+                            if (dy === 0) return;
+
+                            if (event.pixelDelta && event.pixelDelta.y !== 0 && Math.abs(event.angleDelta.y) <= 15) {
+                                let maxS = Math.max(0, appList.contentHeight - appList.height);
+                                appList.contentY = Math.max(0, Math.min(maxS, appList.contentY - event.pixelDelta.y));
+                                event.accepted = true;
+                                return;
+                            }
+
+                            let step = (dy / 120) * launcherWindow.s(140);
+                            let currentTarget = smoothWheelAnim.running ? smoothWheelAnim.to : appList.contentY;
+                            let maxScroll = Math.max(0, appList.contentHeight - appList.height);
+                            let newTarget = Math.max(0, Math.min(maxScroll, currentTarget - step));
+
+                            smoothWheelAnim.stop();
+                            smoothWheelAnim.from = appList.contentY;
+                            smoothWheelAnim.to = newTarget;
+                            smoothWheelAnim.start();
+                            event.accepted = true;
+                        }
                     }
 
                     ListView {
@@ -1796,7 +1861,6 @@ PanelWindow {
                                             anchors.margins: parent.boxPadding
                                             radius: Math.max(0, parent.boxRadius - parent.boxPadding)
                                             color: "transparent"
-                                            clip: true
 
                                              Image {
                                                 id: delegateIcon
@@ -1805,13 +1869,12 @@ PanelWindow {
                                                 cache: true
 
                                                 visible: (!model.fontIcon || model.fontIcon === "") && source !== "" && status === Image.Ready && !failedLoad
-                                                source: (!model.fontIcon || model.fontIcon === "") ? launcherWindow.getIconSource(model.icon) : ""
+                                                source: (!model.fontIcon || model.fontIcon === "") ? (model.iconSource || launcherWindow.getIconSource(model.icon)) : ""
 
                                                 sourceSize: Qt.size(64, 64)
                                                 fillMode: Image.PreserveAspectFit
                                                 asynchronous: true
                                                 smooth: true
-                                                mipmap: true
 
                                                 onStatusChanged: {
                                                     if (status === Image.Error) {
