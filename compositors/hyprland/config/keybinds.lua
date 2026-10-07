@@ -90,12 +90,12 @@ bind("XF86PowerOff", hl.dsp.exec_cmd("serpantinum lock"), { locked = true })
 bind(mainMod .. " + L", hl.dsp.exec_cmd("serpantinum lock"), { repeating = true, locked = true })
 
 -- Screenshots
-bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("serpantinum screenshot"), { locked = true })
-bind(mainMod .. " + SHIFT + s", hl.dsp.exec_cmd("serpantinum screenshot"), { locked = true })
-bind("Print", hl.dsp.exec_cmd("serpantinum screenshot"), { locked = true })
-bind("SHIFT + Print", hl.dsp.exec_cmd("serpantinum screenshot --edit"), { locked = true })
-bind("SUPER + Print", hl.dsp.exec_cmd("serpantinum screenshot --full"), { locked = true })
-bind("SUPER + SHIFT + Print", hl.dsp.exec_cmd("serpantinum screenshot --full --edit"), { locked = true })
+bind(mainMod .. " + SHIFT + S", hl.dsp.exec_cmd("serpantinum screenshot"))
+bind(mainMod .. " + SHIFT + s", hl.dsp.exec_cmd("serpantinum screenshot"))
+bind("Print", hl.dsp.exec_cmd("serpantinum screenshot"))
+bind("SHIFT + Print", hl.dsp.exec_cmd("serpantinum screenshot --edit"))
+bind("SUPER + Print", hl.dsp.exec_cmd("serpantinum screenshot --full"))
+bind("SUPER + SHIFT + Print", hl.dsp.exec_cmd("serpantinum screenshot --full --edit"))
 
 -- Brightness
 bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("serpantinum brightness lower"), { locked = true })
